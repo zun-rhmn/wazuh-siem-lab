@@ -4,7 +4,7 @@ A two-person blue-team lab: a single-node Wazuh SIEM collecting from three log
 sources, with five custom detection rules written, tested, and triaged
 end-to-end.
 
-**Built by:** Zunan Rahman ([@zrahman](https://github.com/zrahman)) and
+**Built by:** Zunan Rahman ([@zrahman](https://github.com/zun-rhmn)) and
 Ali Devjiani ([@adevjiani](https://github.com/adevjiani))
 **Presented at:** [expo name], 10 August 2026
 
