@@ -1,0 +1,108 @@
+# ---------------------------------------------------------------------------
+# Wazuh secrets -- NEVER commit these
+# ---------------------------------------------------------------------------
+
+# Installer output: contains every generated password in plaintext
+wazuh-install-files*
+wazuh-install-files/
+wazuh-passwords.txt
+wazuh-install.sh
+
+# Agent enrollment keys -- these authenticate agents to the manager
+client.keys
+*.keys
+agent.conf.bak
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+certs/
+config/certs/
+
+# Full ossec.conf may contain credentials, integration API keys, and
+# infrastructure detail. Commit only sanitised snippets in agent-configs/.
+ossec.conf
+!agent-configs/*.conf
+
+# Wazuh indexer / dashboard config with embedded credentials
+opensearch.yml
+opensearch_dashboards.yml
+internal_users.yml
+*-backup/
+
+# ---------------------------------------------------------------------------
+# Environment and credentials
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+secrets/
+credentials*
+*.token
+
+# Tailscale
+tailscale.state
+*.tsstate
+
+# SSH
+id_rsa
+id_ed25519
+*.ppk
+known_hosts
+
+# ---------------------------------------------------------------------------
+# Virtual machine artifacts -- large binaries, never belong in git
+# ---------------------------------------------------------------------------
+*.vmdk
+*.vmx
+*.vmsd
+*.vmss
+*.vmem
+*.nvram
+*.vbox
+*.vbox-prev
+*.vdi
+*.ova
+*.ovf
+*.iso
+*.qcow2
+Virtual Machines/
+.vagrant/
+
+# ---------------------------------------------------------------------------
+# Logs and captured data
+# ---------------------------------------------------------------------------
+# samples/ IS tracked -- sanitised log lines for offline rule testing.
+# Raw exports are not: they may contain real hostnames, IPs, or usernames.
+*.log
+!samples/*.log
+alerts.json
+archives.json
+*.pcap
+*.pcapng
+*.evtx
+
+# ---------------------------------------------------------------------------
+# OS and editor noise
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# ---------------------------------------------------------------------------
+# Archives and temp
+# ---------------------------------------------------------------------------
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+tmp/
+temp/
