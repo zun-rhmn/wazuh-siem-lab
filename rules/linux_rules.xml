@@ -1,0 +1,81 @@
+<!--
+  linux_rules.xml
+  Owner: Zunan Rahman (zrahman)
+  Rule ID range: 100100-100199
+  Sources: Linux auth logs, Apache access/error logs
+
+  Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
+  chown wazuh:wazuh, test with wazuh-logtest, restart wazuh-manager.
+-->
+
+<group name="local,syslog,sshd,">
+
+  <!--
+    100100 - Repeated failed SSH logins from the same source IP.
+
+    Composite rule: does not match a log line directly. It counts how many
+    times stock rule 5710 ("Attempt to login using a non-existent user")
+    has fired from the same source IP within the timeframe.
+
+    Tune frequency to your environment. 6 in 120s is aggressive enough to
+    catch a scripted attempt without firing on someone fat-fingering a
+    password twice.
+  -->
+  <rule id="100100" level="10" frequency="6" timeframe="120">
+    <if_matched_sid>5710</if_matched_sid>
+    <same_srcip />
+    <description>Repeated failed SSH logins from $(srcip) - possible brute force</description>
+    <group>authentication_failures,brute_force,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+
+  <!--
+    100102 - Same idea, but for failed passwords against accounts that DO
+    exist. Stock rule 5716 is "sshd: authentication failed". A valid-user
+    brute force is more serious than scanning for nonexistent accounts,
+    hence the higher level.
+  -->
+  <rule id="100102" level="12" frequency="5" timeframe="120">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_srcip />
+    <description>Repeated failed SSH logins for a valid account from $(srcip) - possible credential attack</description>
+    <group>authentication_failures,brute_force,pci_dss_10.2.4,</group>
+  </rule>
+
+</group>
+
+
+<group name="local,web,accesslog,">
+
+  <!--
+    100101 - Burst of 4xx responses from a single source IP.
+
+    Builds on stock rule 31101 ("Web server 400 error code"), which fires
+    on individual 4xx responses. One 404 is noise. Twelve in a minute from
+    one IP is someone enumerating paths.
+
+    Level 8 rather than 10: scanning is reconnaissance, not compromise.
+    See docs/conventions.md for the level scale.
+  -->
+  <rule id="100101" level="8" frequency="12" timeframe="60">
+    <if_matched_sid>31101</if_matched_sid>
+    <same_srcip />
+    <description>Web 404 burst from $(srcip) - possible directory or file enumeration</description>
+    <group>web_scan,recon,pci_dss_6.5,pci_dss_11.4,</group>
+  </rule>
+
+  <!--
+    100103 - Known scanning tool in the request.
+
+    Not a composite rule - fires on a single line. Matches the default
+    user-agent strings that common tools send. Trivially evaded by anyone
+    who sets -A, which is exactly why this is level 7 and not higher:
+    it catches lazy automation, not a careful attacker.
+  -->
+  <rule id="100103" level="7">
+    <if_group>web|accesslog</if_group>
+    <regex>sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wpscan|hydra|zgrab|Nuclei</regex>
+    <description>Known scanning tool user-agent in web request from $(srcip)</description>
+    <group>web_scan,recon,attack,</group>
+  </rule>
+
+</group>
