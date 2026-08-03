@@ -81,8 +81,6 @@ windows-100202-admin-group-add.png
 web-100101-404-burst.png
 ```
 
-You will have twenty of these by 9 August and the unnamed ones will be useless.
-
 **Investigation writeups:** `docs/investigations/<ruleid>-<short-name>.md`
 
 **Branches:** `<username>/<short-description>`, e.g.
