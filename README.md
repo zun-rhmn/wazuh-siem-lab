@@ -5,7 +5,7 @@ sources, with five custom detection rules written, tested, and triaged
 end-to-end.
 
 **Built by:** Zunan Rahman ([@zun_rhmn](https://github.com/zun-rhmn)) and
-Ali Devjiani ([@adevjiani](https://github.com/adevjiani))
+Ali Devjiani ([@adevjiani](https://github.com/acey03))
 **Presented at:** Invest Vancouver, 10 August 2026
 
 ---
