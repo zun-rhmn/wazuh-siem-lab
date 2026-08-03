@@ -65,6 +65,7 @@ Live and firing:
 | 100101 | Zunan | Web 404 burst from one source IP | 8 |
 | 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 |
 | 100103 | Zunan | Known scanning tool user-agent in web request | 7 |
+| 100104 | Zunan | New user account created on a Linux Host | 10 |
 
 In progress:
 
