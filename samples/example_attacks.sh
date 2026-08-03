@@ -130,11 +130,10 @@ test_100102() {
   # valid username.
   for i in $(seq 1 15); do
     echo "  -> ssh $VALID_USER@$TARGET (attempt $i)"
-    sshpass -p "wrongpassword$i" \
+    sshpass -p "wrongpass$i" \
       ssh -o StrictHostKeyChecking=no \
           -o PreferredAuthentications=password \
           -o PubkeyAuthentication=no \
-          -o NumberOfPasswordPrompts=0 \
           -o ConnectTimeout=3 \
           "$VALID_USER@$TARGET" exit 2>/dev/null
     sleep 1
