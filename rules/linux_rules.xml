@@ -5,21 +5,15 @@
   Sources: Linux auth logs, Apache access/error logs
 
   Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
-  chown wazuh:wazuh, test with wazuh-logtest, restart wazuh-manager.
+  chown wazuh:wazuh, wazuh-logtest -t, restart wazuh-manager.
 -->
 
 <group name="local,syslog,sshd,">
 
   <!--
-    100100 - Repeated failed SSH logins from the same source IP.
-
-    Composite rule: does not match a log line directly. It counts how many
-    times stock rule 5710 ("Attempt to login using a non-existent user")
-    has fired from the same source IP within the timeframe.
-
-    Tune frequency to your environment. 6 in 120s is aggressive enough to
-    catch a scripted attempt without firing on someone fat-fingering a
-    password twice.
+    100100 - Repeated failed SSH logins from the same source IP, against
+    accounts that DO NOT exist. Built on stock 5710 ("attempt to login using
+    a non-existent user"). Spray-and-pray: the attacker is guessing usernames.
   -->
   <rule id="100100" level="10" frequency="6" timeframe="120">
     <if_matched_sid>5710</if_matched_sid>
@@ -29,16 +23,43 @@
   </rule>
 
   <!--
-    100102 - Same idea, but for failed passwords against accounts that DO
-    exist. Stock rule 5716 is "sshd: authentication failed". A valid-user
-    brute force is more serious than scanning for nonexistent accounts,
-    hence the higher level.
+    100102 - Repeated failed SSH logins against a VALID account from the same
+    source IP. Built on stock 5760 ("sshd: authentication failed"), which fires
+    when a real account fails password auth and carries the source IP.
+
+    More serious than 100100, hence level 12: the attacker already has a valid
+    username and is working the password.
+
+    ROBUSTNESS NOTE: a single failed attempt produces several correlated events
+    - 5557 (unix_chkpwd), 5503 (PAM user login failed), and 5760 (sshd auth
+    failed). Matching more than one of these would double- or triple-count the
+    same attempt and make the frequency threshold meaningless. We match 5760
+    alone: SSH-specific, carries the source IP, fires once per attempt. To
+    broaden beyond sshd later, use if_matched_group with authentication_failed
+    rather than stacking SIDs.
   -->
-  <rule id="100102" level="12" frequency="5" timeframe="120">
-    <if_matched_sid>5716</if_matched_sid>
+  <rule id="100102" level="12" frequency="6" timeframe="120">
+    <if_matched_sid>5760</if_matched_sid>
     <same_srcip />
     <description>Repeated failed SSH logins for a valid account from $(srcip) - possible credential attack</description>
     <group>authentication_failures,brute_force,pci_dss_10.2.4,</group>
+  </rule>
+
+  <!--
+    100104 - New user account created on a Linux host. Built on stock 5902
+    ("new user added to the system"), which fires on useradd/adduser.
+
+    Account creation is not inherently malicious, but on a monitored server it
+    should always be an expected change. An unexpected one is a strong
+    persistence indicator - how an attacker keeps access after the initial entry
+    is closed. Level 10: worth a look every time, even if usually benign.
+
+    Single-event rule (no frequency): one account creation is enough to alert.
+  -->
+  <rule id="100104" level="10">
+    <if_sid>5902</if_sid>
+    <description>New user account created on $(hostname) - verify this was an expected change</description>
+    <group>account_changes,policy_violation,pci_dss_10.2.5,gpg13_4.13,</group>
   </rule>
 
 </group>
@@ -47,14 +68,9 @@
 <group name="local,web,accesslog,">
 
   <!--
-    100101 - Burst of 4xx responses from a single source IP.
-
-    Builds on stock rule 31101 ("Web server 400 error code"), which fires
-    on individual 4xx responses. One 404 is noise. Twelve in a minute from
-    one IP is someone enumerating paths.
-
-    Level 8 rather than 10: scanning is reconnaissance, not compromise.
-    See docs/conventions.md for the level scale.
+    100101 - Burst of 4xx responses from a single source IP. Built on stock
+    31101 ("web server 400 error code"). One 404 is noise; a dozen in a minute
+    from one IP is path enumeration.
   -->
   <rule id="100101" level="8" frequency="12" timeframe="60">
     <if_matched_sid>31101</if_matched_sid>
@@ -64,12 +80,9 @@
   </rule>
 
   <!--
-    100103 - Known scanning tool in the request.
-
-    Not a composite rule - fires on a single line. Matches the default
-    user-agent strings that common tools send. Trivially evaded by anyone
-    who sets -A, which is exactly why this is level 7 and not higher:
-    it catches lazy automation, not a careful attacker.
+    100103 - Known scanning tool user-agent. Single-line match, no frequency.
+    Trivially evaded by setting -A, which is why it is only level 7: it catches
+    lazy automation, not a careful attacker.
   -->
   <rule id="100103" level="7">
     <if_group>web|accesslog</if_group>
