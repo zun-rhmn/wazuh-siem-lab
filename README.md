@@ -1,8 +1,7 @@
 # Wazuh SIEM Lab
 
 A two-person blue-team lab: a single-node Wazuh SIEM collecting from three log
-sources, with five custom detection rules written, tested, and triaged
-end-to-end.
+sources, with custom detection rules written, tested, and triaged end-to-end.
 
 **Built by:** Zunan Rahman ([@zun-rhmn](https://github.com/zun-rhmn)) and
 Ali Devjiani ([@acey03](https://github.com/acey03))
@@ -34,10 +33,9 @@ exposure.
 | --- | --- |
 | Wazuh version | 4.14 (pinned — do not mix minor versions) |
 | Manager address | `wazuh-siem-manager` |
-| Manager FQDN | `wazuh-siem-manager.tailf359cd.ts.net` |
 | Dashboard | `https://wazuh-siem-manager` |
 | Manager OS | Ubuntu Server 24.04 LTS, 4 vCPU / 8 GB / 60 GB |
-| Timezone | UTC on every host |
+| Timezone | UTC on every host, NTP sync verified |
 
 > The manager runs on Zunan's laptop, so the lab is reachable only while that
 > machine is powered on. Rule development does **not** require it — see
@@ -53,23 +51,42 @@ exposure.
 | 2 | Linux auth | `ubuntu-zrahman` | `/var/log/auth.log`, `/var/log/syslog` |
 | 3 | Web server | `ubuntu-zrahman` | Apache `access.log`, `error.log` |
 
+All three are enrolled, active, and confirmed decoding.
+
 ---
 
 ## Custom detections
+
+Live and firing:
+
+| Rule ID | Owner | Detection | Level |
+| --- | --- | --- | --- |
+| 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 |
+| 100101 | Zunan | Web 404 burst from one source IP | 8 |
+| 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 |
+| 100103 | Zunan | Known scanning tool user-agent in web request | 7 |
+
+In progress:
 
 | Rule ID | Owner | Detection | Level |
 | --- | --- | --- | --- |
 | 100200 | Ali | Multiple failed Windows logons | 10 |
 | 100201 | Ali | Suspicious PowerShell usage | 9 |
 | 100202 | Ali | New user added to Administrators | 12 |
-| 100100 | Zunan | Repeated failed SSH logins | 10 |
-| 100101 | Zunan | Web 404 burst / suspicious user-agent | 8 |
-| 100102 | Zunan | Repeated failed SSH logins for a valid account | 12 |
-| 100103 | Zunan | Known scanning tool user-agent in web request | 7 |
+
+100100, 100101, and 100102 are composite rules: they do not match a log line
+directly. Each counts how many times a stock Wazuh rule has fired from the same
+source IP within a timeframe, using `if_matched_sid` with `frequency`,
+`timeframe`, and `same_srcip`. A single failed login is noise; six in two
+minutes from one address is a detection.
+
+Thresholds were tuned empirically against observed event rates in this lab
+rather than taken from a reference — the textbook values did not fire reliably
+at the volumes a three-host lab actually produces.
 
 Rules live in `rules/`, split by platform so the two of us never edit the same
-file. See [`docs/conventions.md`](docs/conventions.md) for ID ranges and the
-alert-level scale.
+file. See [`conventions.md`](conventions.md) for ID ranges and the alert-level
+scale.
 
 ---
 
@@ -78,19 +95,15 @@ alert-level scale.
 ```
 .
 |-- README.md
+|-- conventions.md            # naming, ID ranges, alert levels -- read first
 |-- .gitignore
+|-- .gitattributes
 |-- docs/
-|   |-- conventions.md        # naming, ID ranges, alert levels -- read first
-|   |-- setup.md              # full build steps, manager and agents
 |   `-- investigations/       # one writeup per triaged alert
 |-- rules/
 |   |-- linux_rules.xml       # Zunan  -- 100100-100199
 |   `-- windows_rules.xml     # Ali    -- 100200-100299
 |-- decoders/
-|-- agent-configs/
-|   |-- ubuntu-agent.conf     # <localfile> blocks for auth/syslog/apache
-|   |-- windows-agent.conf    # <localfile> blocks for Security/Sysmon
-|   `-- sysmon-config.xml     # shared -- install from this copy, not a download
 |-- samples/                  # raw log lines for offline rule testing
 `-- screenshots/              # <source>-<ruleid>-<description>.png
 ```
@@ -145,14 +158,59 @@ NET START WazuhSvc
 
 Then confirm the agent reads **Active** in the dashboard.
 
+### Register the rule files — do this once
+
+Wazuh only loads `local_rules.xml` by default. Custom rule files must be
+declared inside the `<ruleset>` block of `/var/ossec/etc/ossec.conf` on the
+**manager**:
+
+```xml
+<rule_include>etc/rules/linux_rules.xml</rule_include>
+<rule_include>etc/rules/windows_rules.xml</rule_include>
+```
+
+Without these lines the files sit in the rules directory and are never read.
+Nothing errors — the rules simply never fire.
+
 ### Deploy a rule change
 
+Rules run on the manager, not on the agents. Agents only ship raw logs; all
+decoding and rule matching happens centrally.
+
 ```bash
-# edit rules/linux_rules.xml locally, commit, then on the manager:
+cd ~/wazuh-siem-lab && git pull
+
 sudo cp rules/linux_rules.xml /var/ossec/etc/rules/
-sudo /var/ossec/bin/wazuh-logtest        # paste a sample line, confirm it fires
+sudo chown wazuh:wazuh /var/ossec/etc/rules/linux_rules.xml
+
+sudo /var/ossec/bin/wazuh-logtest -t      # validate syntax BEFORE restarting
 sudo systemctl restart wazuh-manager
+sudo tail -20 /var/ossec/logs/ossec.log   # confirm it came back cleanly
 ```
+
+Two things that fail silently if skipped:
+
+- **The `chown`.** A rule file owned by root cannot be read by the `wazuh` user.
+  The file loads nothing and reports no error.
+- **The syntax check.** Malformed XML stops the manager from starting at all,
+  which turns a bad rule into a dead service.
+
+### Testing composite rules
+
+`wazuh-logtest` keeps state within a session, which is what makes
+frequency-based rules testable:
+
+```bash
+sudo /var/ossec/bin/wazuh-logtest
+```
+
+Paste a raw log line and you will see the stock rule match. Paste the *same
+line* repeatedly without exiting — once the frequency threshold is crossed, the
+custom rule fires. Seeing only the stock rule on a single paste is expected, not
+a failure.
+
+Note that logtest is a simulator: it writes nothing to `alerts.json` and nothing
+to the index. Confirming a rule there does not put an alert on the dashboard.
 
 ---
 
@@ -171,20 +229,53 @@ two of us unblocked from each other.
 ## Operational notes
 
 - **Vulnerability detection is disabled** in `ossec.conf`. Its CVE feeds are
-  several GB and irrelevant to this project.
+  several GB, and this project is about detection engineering rather than
+  vulnerability management. A scoping decision, not an oversight.
 - **Indexer heap is capped at 1 GB** in `/etc/wazuh-indexer/jvm.options`, down
-  from the default, to fit an 8 GB VM.
-- **Firewall:** UFW denies all inbound except on `tailscale0`. The dashboard and
-  agent ports are not exposed to the LAN or the internet.
-- **If the dashboard loads but no new alerts appear**, check host disk space
-  first. When the disk fills, OpenSearch flips indices to read-only, which looks
-  exactly like a broken agent.
+  from the installer default, to fit an 8 GB VM running the manager, indexer,
+  and dashboard together.
+- **Firewall:** UFW denies all inbound except on `tailscale0`. The dashboard,
+  indexer, and agent ports are not exposed to the LAN or the internet, and no
+  ports are forwarded. The only path in is an authenticated tailnet device.
+- **Active response is disabled.** Wazuh ships with `firewall-drop` enabled by
+  default, which bans source IPs that trigger brute-force rules. In a lab where
+  the attacker host is also the operator's workstation, that locks you out of
+  your own environment mid-test.
+
+### Failure modes worth knowing
+
+**The indexer admin password lives in four places.** Rotating it in
+`internal_users.yml` alone breaks things quietly:
+
+| Location | Consumer |
+| --- | --- |
+| `/etc/wazuh-indexer/opensearch-security/internal_users.yml` | the credential itself |
+| `/etc/wazuh-dashboard/opensearch_dashboards.yml` | dashboard -> indexer |
+| `/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml` | Wazuh API (may use a separate `wazuh-wui` account) |
+| `/etc/filebeat/filebeat.yml` | **alert shipping** |
+
+Missing the Filebeat entry produced the least obvious failure in this build:
+rules fired correctly, alerts were written to `alerts.json` on disk, all three
+services reported healthy, and the dashboard loaded normally — but showed no
+results for any time range, because nothing was reaching the index. Diagnosing
+it meant checking each stage of the pipeline separately rather than trusting the
+service status. `sudo filebeat test output` returns a 401 in this state.
+
+The credential is now stored in the Filebeat keystore rather than plaintext in
+the config file.
+
+**If the dashboard loads but no new alerts appear**, work backwards through the
+pipeline: does `alerts.json` have recent entries? Does `filebeat test output`
+pass? Has the index doc count grown? Is the host disk full — when it fills,
+OpenSearch flips indices to read-only, which looks exactly like a broken agent.
 
 ---
 
 ## Skills demonstrated
 
-SIEM deployment and administration - log source onboarding across Windows,
-Linux, and web servers - detection engineering in Wazuh's rule language - alert
-triage and investigation - secure network design with a zero-trust mesh VPN -
-collaborative Git workflow with branch protection and peer review.
+SIEM deployment and administration — log source onboarding across Windows,
+Linux, and web servers — detection engineering in Wazuh's rule language,
+including composite frequency-based rules — alert triage and investigation —
+secure network design with a zero-trust mesh VPN and host firewalls — pipeline
+troubleshooting across manager, Filebeat, and indexer — collaborative Git
+workflow with branch protection and peer review.
