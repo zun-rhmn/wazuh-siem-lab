@@ -4,8 +4,8 @@ A two-person blue-team lab: a single-node Wazuh SIEM collecting from three log
 sources, with five custom detection rules written, tested, and triaged
 end-to-end.
 
-**Built by:** Zunan Rahman ([@zun_rhmn](https://github.com/zun-rhmn)) and
-Ali Devjiani ([@adevjiani](https://github.com/acey03))
+**Built by:** Zunan Rahman ([@zun-rhmn](https://github.com/zun-rhmn)) and
+Ali Devjiani ([@acey03](https://github.com/acey03))
 **Presented at:** Invest Vancouver, 10 August 2026
 
 ---
@@ -64,6 +64,8 @@ exposure.
 | 100202 | Ali | New user added to Administrators | 12 |
 | 100100 | Zunan | Repeated failed SSH logins | 10 |
 | 100101 | Zunan | Web 404 burst / suspicious user-agent | 8 |
+| 100102 | Zunan | Repeated failed SSH logins for a valid account | 12 |
+| 100103 | Zunan | Known scanning tool user-agent in web request | 7 |
 
 Rules live in `rules/`, split by platform so the two of us never edit the same
 file. See [`docs/conventions.md`](docs/conventions.md) for ID ranges and the
