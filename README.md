@@ -19,7 +19,7 @@ Ali Devjiani ([@acey03](https://github.com/acey03))
   wazuh-siem-manager    ubuntu-zrahman        win-adevjiani
   (Ubuntu 24.04 LTS)    (Ubuntu 24.04)        (Windows 11)
   Manager + Indexer     Wazuh agent           Wazuh agent
-  + Dashboard           auth.log, syslog      Security log
+  + Dashboard           journald (auth)       Security log
   VMware / Zunan        Apache access/error   Sysmon
                         VMware / Zunan        VirtualBox / Ali
 ```
@@ -48,10 +48,40 @@ exposure.
 | # | Source | Host | Collected |
 | --- | --- | --- | --- |
 | 1 | Windows + Sysmon | `win-adevjiani` | Security event log, Sysmon operational log |
-| 2 | Linux auth | `ubuntu-zrahman` | `/var/log/auth.log`, `/var/log/syslog` |
+| 2 | Linux auth | `ubuntu-zrahman` | systemd journal, read directly by the agent |
 | 3 | Web server | `ubuntu-zrahman` | Apache `access.log`, `error.log` |
 
 All three are enrolled, active, and confirmed decoding.
+
+### The Linux agent reads the systemd journal, not `/var/log/auth.log`
+
+Ubuntu 24.04 ships `rsyslog` disabled, so `/var/log/auth.log` and
+`/var/log/syslog` do not exist on `ubuntu-zrahman`. The agent collects auth and
+system events from `journald` instead, via a `journald` `localfile` block rather
+than the file-tailing `syslog` block most Wazuh guides show:
+
+```xml
+<localfile>
+  <log_format>journald</log_format>
+  <location>journald</location>
+</localfile>
+```
+
+This matters in three places:
+
+- **Copying a `<location>/var/log/auth.log</location>` block from a tutorial
+  collects nothing.** The file is absent, and Wazuh logs a missing-file warning
+  at startup that is easy to scroll past. Rules 100100, 100102, and 100104 all
+  depend on this source, so they simply never fire.
+- **Capturing a sample line means `journalctl -u ssh`, not `tail`.** OpenSSH 9.8
+  handles each connection in a separate `sshd-session` process, so
+  `journalctl _COMM=sshd` misses the auth failures entirely — filter by unit.
+- **Journal-sourced events reach the decoders in syslog shape**, which is why
+  the stock rules still match unchanged and the custom rules can key off them:
+  100100 on 5710, 100102 on 5760, 100104 on 5902.
+
+Sample lines in `samples/` were captured this way and are labelled with their
+source — see [`samples/README.md`](samples/README.md).
 
 ---
 
@@ -106,7 +136,8 @@ scale.
 |   `-- windows_rules.xml     # Ali    -- 100200-100299
 |-- decoders/
 |-- agent-configs/
-|   `-- sysmonconfig-export.xml   # canonical Sysmon config -- install from this copy
+|   |-- sysmonconfig-export.xml   # canonical Sysmon config -- install from this copy
+|   `-- ubuntu-agent.conf
 |-- samples/
 |   |-- *.log                 # raw log lines for offline rule testing
 |   `-- example_attacks.sh    # generates live attack traffic to trigger the rules
