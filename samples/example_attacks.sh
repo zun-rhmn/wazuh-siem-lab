@@ -112,12 +112,12 @@ test_100100() {
   # so this runs unattended. The server still logs each failed attempt.
   for i in $(seq 1 20); do
     echo "  -> ssh baduser$i@$TARGET"
-    sshpass -p "wrongpass$i" \
-      ssh -o StrictHostKeyChecking=no \
-          -o PreferredAuthentications=password \
-          -o PubkeyAuthentication=no \
-          -o ConnectTimeout=3 \
-          "$VALID_USER@$TARGET" exit 2>/dev/null
+    ssh -o StrictHostKeyChecking=no \
+        -o PreferredAuthentications=password \
+        -o PubkeyAuthentication=no \
+        -o NumberOfPasswordPrompts=0 \
+        -o ConnectTimeout=3 \
+        "baduser$i@$TARGET" exit 2>/dev/null
     sleep 1
   done
   echo "Expect: many x rule 5710 (stock), then 1x rule 100100, level 10"

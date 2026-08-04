@@ -1,0 +1,3 @@
+Aug 04 00:50:40 ubuntu-zrahman sudo[3561]: zrahman : TTY=/dev/tty1 ; PWD=/home/zrahman ; USER=root ; COMMAND=/usr/sbin/useradd -m testuser5-zrahman
+Aug 04 00:50:40 ubuntu-zrahman useradd[3565]: new group: name=testuser5-zrahman, GID=1002
+Aug 04 00:50:40 ubuntu-zrahman useradd[3565]: new user: name=testuser5-zrahman, UID=1002, GID=1002, home=/home/testuser5-zrahman, shell=/bin/sh, from=/dev/pts/1
