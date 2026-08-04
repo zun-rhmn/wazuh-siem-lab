@@ -95,7 +95,7 @@ web-100101-404-burst.png
 | Wazuh version | **4.14** | Agent minor version must match the manager. Agents newer than the manager are unsupported. |
 | Timezone | **UTC everywhere** | `sudo timedatectl set-timezone UTC` on Linux; match on Windows. Correlating a Windows alert against a Linux one across two timezones is needless arithmetic and looks sloppy in screenshots. |
 | Manager address | `wazuh-siem-manager` | Always the MagicDNS name, never the `100.x.y.z` address — Tailscale can reassign it. |
-| Sysmon config | `agent-configs/sysmon-config.xml` | Install from the repo copy. Different configs produce different event fields, and rules that work for one of us will mysteriously not fire for the other. |
+| Sysmon config | `agent-configs/sysmonconfig-export.xml` | Install from the repo copy. Different configs produce different event fields, and rules that work for one of us will mysteriously not fire for the other. |
 
 ---
 
