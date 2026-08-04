@@ -3,7 +3,7 @@
 # example_attacks.sh
 #
 # Generates safe test activity against the lab to trigger custom detections.
-# Run from kali-zrahman (the attacker host) so alerts carry a real source IP
+# Run from the attacker host, not the target, so alerts carry a real source IP
 # rather than ::1 — same_srcip grouping does not work meaningfully against
 # localhost.
 #
@@ -17,7 +17,7 @@
 # When one rule is named, the inter-test pause is skipped — you get the burst
 # and nothing else. Good for the demo, or for iterating on a single rule.
 #
-# Requires: the manager VM running, ubuntu-zrahman reachable on the tailnet.
+# Requires: the manager VM running, the target agent reachable on the tailnet.
 #
 # Watch alerts land, on the manager, in another window:
 #   sudo tail -f /var/ossec/logs/alerts/alerts.json | \
@@ -25,8 +25,16 @@
 
 set -u
 
-TARGET="ubuntu-zrahman"
-VALID_USER="testuser-zrahman"
+# Target host and test account. Real hostnames and usernames belong in
+# attack-target.conf beside this script -- that file is gitignored, so they
+# stay out of the tracked repo. Copy attack-target.conf.example to start.
+# Environment overrides win over the conf file:
+#   TARGET=my-host VALID_USER=my-user ./example_attacks.sh 100102
+CONF="$(dirname "$0")/attack-target.conf"
+[ -f "$CONF" ] && . "$CONF"
+
+TARGET="${TARGET:-ubuntu-agent}"
+VALID_USER="${VALID_USER:-testuser}"
 PAUSE=90          # seconds between tests in a full run, so windows do not overlap
 
 # --------------------------------------------------------------------------
