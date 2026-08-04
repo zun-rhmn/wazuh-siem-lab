@@ -105,9 +105,17 @@ scale.
 |   |-- linux_rules.xml       # Zunan  -- 100100-100199
 |   `-- windows_rules.xml     # Ali    -- 100200-100299
 |-- decoders/
-|-- samples/                  # raw log lines for offline rule testing
+|-- agent-configs/
+|   `-- sysmonconfig-export.xml   # canonical Sysmon config -- install from this copy
+|-- samples/
+|   |-- *.log                 # raw log lines for offline rule testing
+|   `-- example_attacks.sh    # generates live attack traffic to trigger the rules
 `-- screenshots/              # <source>-<ruleid>-<description>.png
 ```
+
+Both agents must run the Sysmon config from `agent-configs/` rather than a
+separately downloaded copy — different configs emit different event fields, so
+a rule that works for one of us will silently not fire for the other.
 
 ---
 
@@ -213,6 +221,36 @@ a failure.
 Note that logtest is a simulator: it writes nothing to `alerts.json` and nothing
 to the index. Confirming a rule there does not put an alert on the dashboard.
 
+### Generating live test traffic
+
+`samples/example_attacks.sh` drives real attack traffic at the Linux agent to
+exercise the detections end-to-end — the counterpart to logtest, since this
+path does reach `alerts.json` and the dashboard.
+
+Run it from the **attacker host**, not the target: `same_srcip` grouping is
+meaningless when every event carries `::1`.
+
+```bash
+cp samples/attack-target.conf.example samples/attack-target.conf  # once -- set your host + test account
+./samples/example_attacks.sh --list           # show available tests
+./samples/example_attacks.sh                  # every test, paced with pauses
+./samples/example_attacks.sh 100102           # one test, no pause
+./samples/example_attacks.sh 100100 100101    # several, in the order given
+```
+
+`attack-target.conf` holds the target hostname and test account and is
+gitignored, so those values stay local. Without it the script falls back to
+generic placeholders and will not reach your lab. Each test is a `test_<ruleid>`
+bash function; add new ones in that shape and list the ID in `ALL_TESTS` to
+include it in a full run.
+
+Watch alerts arrive on the manager while testing:
+
+```bash
+sudo tail -f /var/ossec/logs/alerts/alerts.json | \
+  jq -c '{time:.timestamp, rule:.rule.id, desc:.rule.description, src:.data.srcip}'
+```
+
 ---
 
 ## Offline rule development
@@ -242,6 +280,13 @@ two of us unblocked from each other.
   default, which bans source IPs that trigger brute-force rules. In a lab where
   the attacker host is also the operator's workstation, that locks you out of
   your own environment mid-test.
+- **OpenSSH per-source penalties are disabled** on the Linux agent
+  (`PerSourcePenalties no`). OpenSSH 9.8 rate-limits repeated failed auth at the
+  daemon level, which is good hardening but throttled our brute-force testing
+  before rule 100102 could observe enough failures to fire. Disabled here so the
+  SIEM detection can be demonstrated end-to-end. In production you would keep
+  both: the daemon control as first-line mitigation, the SIEM rule for detection
+  and cross-host correlation of what gets through.
 
 ### Failure modes worth knowing
 
