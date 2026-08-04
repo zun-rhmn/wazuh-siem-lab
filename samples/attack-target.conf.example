@@ -1,0 +1,14 @@
+# Copy to attack-target.conf and fill in your real values.
+#
+#   cp samples/attack-target.conf.example samples/attack-target.conf
+#
+# attack-target.conf is gitignored -- real hostnames and usernames stay local
+# and never reach the repo. This .example file is tracked, so keep placeholders
+# in it.
+
+# Agent host the attacks run against, as reachable on the tailnet.
+TARGET="ubuntu-agent"
+
+# An account that actually EXISTS on $TARGET. Rule 100102 needs a valid
+# username to produce failed-password events rather than invalid-user ones.
+VALID_USER="testuser"
