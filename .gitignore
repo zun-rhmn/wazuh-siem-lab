@@ -44,6 +44,10 @@ secrets/
 credentials*
 *.token
 
+# Local AI assistant tooling -- not part of the project
+CLAUDE.md
+.claude/
+
 # Attack-script target config -- real hostnames and test usernames.
 # The tracked script reads from this; keep the values out of the repo.
 samples/attack-target.conf
