@@ -1,0 +1,34 @@
+<!--
+  windows_rules.xml
+  Owner: ali devjiani (adevjiani)
+  Rule ID range: 100100-100199
+  Sources: wazuh discover tab alerts, wazuh docs
+
+  Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
+  chown wazuh:wazuh, wazuh-logtest -t, restart wazuh-manager.
+-->
+
+  <rule id="100200" level="10" frequency="6" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <description>Multiple failed Windows logons from $(win.eventdata.ipAddress) - possible brute force</description>
+    <group>authentication_failures, windows_logon_failures</group>
+  </rule>
+
+  <rule id="100201" level="9">
+    <if_sid>60009</if_sid>
+    <field name="win.eventdata.payload" type="pcre2">(?i)CommandInvocation</field>
+    <field name="win.system.message" type="pcre2">(?i)EncodedCommand|FromBase64String|EncodedArguments|-e\b|-enco\b|-en\b</field>
+    <description>Encoded command executed via PowerShell.</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1562.001</id>
+    </mitre>
+  </rule>
+
+  <rule id="100202" level="12">
+    <if_sid>18217</if_sid>
+    <field name="win.eventdata.targetUserName">^Administrators$|^Domain Admins$</field>
+    <description>Privilege Escalation: User added to Windows Admin Group.</description>
+    <group>win_priviledge_escalation</group>
+  </rule>
