@@ -55,10 +55,9 @@ All three are enrolled, active, and confirmed decoding.
 
 ### The Linux agent reads the systemd journal, not `/var/log/auth.log`
 
-Ubuntu 24.04 ships `rsyslog` disabled, so `/var/log/auth.log` and
-`/var/log/syslog` do not exist on `ubuntu-zrahman`. The agent collects auth and
-system events from `journald` instead, via a `journald` `localfile` block rather
-than the file-tailing `syslog` block most Wazuh guides show:
+On `ubuntu-zrahman`, auth and system events go to the systemd journal rather
+than to `/var/log/auth.log`, so the agent is configured to read `journald`
+directly instead of tailing the file most Wazuh guides point at:
 
 ```xml
 <localfile>
@@ -80,7 +79,9 @@ This matters in three places:
   the stock rules still match unchanged and the custom rules can key off them:
   100100 on 5710, 100102 on 5760, 100104 on 5902.
 
-Sample lines in `samples/` were captured this way and are labelled with their
+The agent's actual `<localfile>` blocks are committed at
+[`agent-configs/ubuntu-agent.conf`](agent-configs/ubuntu-agent.conf). Sample
+lines in `samples/` were captured this way and are labelled with their
 source — see [`samples/README.md`](samples/README.md).
 
 ---
@@ -89,21 +90,21 @@ source — see [`samples/README.md`](samples/README.md).
 
 Live and firing:
 
-| Rule ID | Owner | Detection | Level |
-| --- | --- | --- | --- |
-| 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 |
-| 100101 | Zunan | Web 404 burst from one source IP | 8 |
-| 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 |
-| 100103 | Zunan | Known scanning tool user-agent in web request | 7 |
-| 100104 | Zunan | New user account created on a Linux Host | 10 |
+| Rule ID | Owner | Detection | Level | ATT&CK |
+| --- | --- | --- | --- | --- |
+| 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 | T1110.001 |
+| 100101 | Zunan | Web 404 burst from one source IP | 8 | T1595.003 |
+| 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 | T1110.001 |
+| 100103 | Zunan | Known scanning tool user-agent in web request | 7 | T1595.002 |
+| 100104 | Zunan | New user account created on a Linux Host | 10 | T1136.001 |
 
 In progress:
 
-| Rule ID | Owner | Detection | Level |
-| --- | --- | --- | --- |
-| 100200 | Ali | Multiple failed Windows logons | 10 |
-| 100201 | Ali | Suspicious PowerShell usage | 9 |
-| 100202 | Ali | New user added to Administrators | 12 |
+| Rule ID | Owner | Detection | Level | ATT&CK |
+| --- | --- | --- | --- | --- |
+| 100200 | Ali | Multiple failed Windows logons | 10 | — |
+| 100201 | Ali | Suspicious PowerShell usage | 9 | T1059.001, T1562.001 |
+| 100202 | Ali | New user added to Administrators | 12 | — |
 
 100100, 100101, and 100102 are composite rules: they do not match a log line
 directly. Each counts how many times a stock Wazuh rule has fired from the same
@@ -118,6 +119,42 @@ at the volumes a three-host lab actually produces.
 Rules live in `rules/`, split by platform so the two of us never edit the same
 file. See [`conventions.md`](conventions.md) for ID ranges and the alert-level
 scale.
+
+### ATT&CK mapping
+
+Each rule carries a `<mitre>` block naming the technique it detects, which is
+what puts the alert on the dashboard's **MITRE ATT&CK** view and makes coverage
+gaps visible as empty tactics rather than something you have to reason about
+from a list of rule IDs:
+
+```xml
+<rule id="100104" level="10">
+  <if_sid>5902</if_sid>
+  <description>New user account created on $(hostname) - verify this was an expected change</description>
+  <mitre>
+    <id>T1136.001</id>
+  </mitre>
+  <group>account_changes,policy_violation,pci_dss_10.2.5,gpg13_4.13,</group>
+</rule>
+```
+
+Two things to keep in mind when tagging a new rule:
+
+- **Tag what the rule observes, not what the attacker is presumably up to.**
+  100102 watches failed logins against a valid account, so it maps to
+  T1110.001 (Password Guessing) and nothing else — tempting as it is to add
+  Valid Accounts, the rule never sees a successful login. Aspirational tags
+  make the coverage view read better than the detections actually are.
+- **Sub-techniques where one fits.** T1110.001 says password guessing;
+  T1110 alone lumps it in with spraying and credential stuffing, which these
+  rules do not distinguish.
+
+Current coverage: Credential Access (T1110.001), Reconnaissance (T1595.002,
+T1595.003), Persistence (T1136.001), and on the Windows side Execution and
+Defense Evasion (T1059.001, T1562.001). 100200 and 100202 are not yet tagged.
+Wazuh validates the IDs against its bundled ATT&CK database at startup — a
+typo'd technique ID is rejected on restart, so run `wazuh-logtest -t` and check
+`ossec.log` after deploying.
 
 ---
 
@@ -137,7 +174,7 @@ scale.
 |-- decoders/
 |-- agent-configs/
 |   |-- sysmonconfig-export.xml   # canonical Sysmon config -- install from this copy
-|   `-- ubuntu-agent.conf
+|   `-- ubuntu-agent.conf         # Linux agent <localfile> blocks (journald + Apache)
 |-- samples/
 |   |-- *.log                 # raw log lines for offline rule testing
 |   `-- example_attacks.sh    # generates live attack traffic to trigger the rules
@@ -346,13 +383,23 @@ pipeline: does `alerts.json` have recent entries? Does `filebeat test output`
 pass? Has the index doc count grown? Is the host disk full — when it fills,
 OpenSearch flips indices to read-only, which looks exactly like a broken agent.
 
+## Next steps
+
+- **Network-based detection.** This lab is entirely host-based (HIDS): agents
+  read logs a host has already written. Adding Suricata as a NIDS on the Linux
+  agent would give packet-level visibility — port scans, exploit payloads,
+  and C2 patterns that never appear in a host log. Wazuh ingests Suricata's
+  eve.json natively.
+- **Migrate the manager to dedicated hardware** so the lab runs continuously.
+
 ---
 
 ## Skills demonstrated
 
 SIEM deployment and administration — log source onboarding across Windows,
 Linux, and web servers — detection engineering in Wazuh's rule language,
-including composite frequency-based rules — alert triage and investigation —
+including composite frequency-based rules mapped to MITRE ATT&CK techniques —
+alert triage and investigation —
 secure network design with a zero-trust mesh VPN and host firewalls — pipeline
 troubleshooting across manager, Filebeat, and indexer — collaborative Git
-workflow with branch protection and peer review.
+workflow with and peer review.

@@ -19,6 +19,9 @@
     <if_matched_sid>5710</if_matched_sid>
     <same_srcip />
     <description>Repeated failed SSH logins from $(srcip) - possible brute force</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
     <group>authentication_failures,brute_force,pci_dss_10.2.4,pci_dss_10.2.5,</group>
   </rule>
 
@@ -42,6 +45,9 @@
     <if_matched_sid>5760</if_matched_sid>
     <same_srcip />
     <description>Repeated failed SSH logins for a valid account from $(srcip) - possible credential attack</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
     <group>authentication_failures,brute_force,pci_dss_10.2.4,</group>
   </rule>
 
@@ -59,6 +65,9 @@
   <rule id="100104" level="10">
     <if_sid>5902</if_sid>
     <description>New user account created on $(hostname) - verify this was an expected change</description>
+    <mitre>
+      <id>T1136.001</id>
+    </mitre>
     <group>account_changes,policy_violation,pci_dss_10.2.5,gpg13_4.13,</group>
   </rule>
 
@@ -76,6 +85,9 @@
     <if_matched_sid>31101</if_matched_sid>
     <same_srcip />
     <description>Web 404 burst from $(srcip) - possible directory or file enumeration</description>
+    <mitre>
+      <id>T1595.003</id>
+    </mitre>
     <group>web_scan,recon,pci_dss_6.5,pci_dss_11.4,</group>
   </rule>
 
@@ -88,6 +100,9 @@
     <if_group>web|accesslog</if_group>
     <regex>sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wpscan|hydra|zgrab|Nuclei</regex>
     <description>Known scanning tool user-agent in web request from $(srcip)</description>
+    <mitre>
+      <id>T1595.002</id>
+    </mitre>
     <group>web_scan,recon,attack,</group>
   </rule>
 
