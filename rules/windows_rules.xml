@@ -34,11 +34,12 @@
   </rule>
 
 <!-- future ip matching consideration (can't test rn) -->
-  <rule id="100203" level="13" frequency="1" timeframe="300">
+<!--risk of high false-->
+  <rule id="100203" level="13" timeframe="300">
     <if_sid>60106</if_sid>
     <if_matched_sid>100200</if_matched_sid>
     <same_field>win.eventdata.targetUserName</same_field>
-    <description>Successful Windows logon for $(win.eventdata.targetUserName) after multiple failed attempts - possible account compromise</description>
+    <description>Successful Windows logon for $(win.eventdata.targetUserName) after multiple failed attempts - possible account compromise through brute force</description>
     <group>authentication_failures, windows_logon_failures, account_compromise</group>
   </rule>
 
