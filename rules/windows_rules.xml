@@ -27,9 +27,9 @@
   </rule>
 
   <rule id="100202" level="12">
-    <if_sid>18217</if_sid>
-    <field name="win.eventdata.targetUserName">^Administrators$|^Domain Admins$</field>
-    <description>Privilege Escalation: User added to Windows Admin Group.</description>
+    <if_sid>60154</if_sid>
+    <field name="win.system.eventID">^4732$</field>
+    <description>Privilege Escalation: User $(win.eventdata.memberName) added to the Windows Administrators group by $(win.eventdata.subjectUserName).</description>
     <group>win_priviledge_escalation</group>
   </rule>
 
