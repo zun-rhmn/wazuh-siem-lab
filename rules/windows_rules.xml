@@ -5,7 +5,7 @@
   Sources: wazuh discover tab alerts, wazuh docs
 
   Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
-  chown wazuh:wazuh, wazuh-logtest -t, restart wazuh-manager.
+  chown wazuh:wazuh, wazuh-analysisd -t, restart wazuh-manager.
 -->
 <group name="local,windows,sysmon,">
   <rule id="100200" level="10" frequency="6" timeframe="120">
