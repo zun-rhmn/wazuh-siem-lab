@@ -55,8 +55,8 @@ All three are enrolled, active, and confirmed decoding.
 
 ### The Linux agent reads the systemd journal, not `/var/log/auth.log`
 
-On `ubuntu-zrahman`, auth and system events go to the systemd journal rather
-than to `/var/log/auth.log`, so the agent is configured to read `journald`
+On `ubuntu-zrahman`, auth and system events go to the `systemd journal` rather
+than to /var/log/auth.log, so the agent is configured to read `journald`
 directly instead of tailing the file most Wazuh guides point at:
 
 ```xml
