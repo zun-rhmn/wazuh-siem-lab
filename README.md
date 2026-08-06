@@ -92,14 +92,14 @@ Live and firing:
 
 | Rule ID | Owner | Detection | Level | ATT&CK |
 | --- | --- | --- | --- | --- |
-| 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 | T1110.001 |
+| 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 | T1110 |
 | 100101 | Zunan | Web 404 burst from one source IP | 8 | T1595.003 |
 | 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 | T1110.001 |
 | 100103 | Zunan | Known scanning tool user-agent in web request | 7 | T1595.002 |
-| 100104 | Zunan | New user account created on a Linux Host | 10 | T1136.001 |
+| 100104 | Zunan | New user account created on a Linux host | 10 | T1136.001 |
 | 100200 | Ali | Multiple failed Windows logons | 10 | — |
 | 100202 | Ali | New user added to Administrators | 12 | — |
-| 100203 | Ali | Possible account compromise through brute force | 13 |
+| 100203 | Ali | Possible account compromise through brute force | 13 | — |
 
 In progress:
 
@@ -146,16 +146,18 @@ Two things to keep in mind when tagging a new rule:
   T1110.001 (Password Guessing) and nothing else — tempting as it is to add
   Valid Accounts, the rule never sees a successful login. Aspirational tags
   make the coverage view read better than the detections actually are.
-- **Sub-techniques where one fits.** T1110.001 says password guessing;
-  T1110 alone lumps it in with spraying and credential stuffing, which these
-  rules do not distinguish.
+- **Sub-techniques where one fits, the parent where none does.** 100102 is
+  password guessing against a known account, so T1110.001 is exact. 100100
+  fires on attempts against accounts that do not exist — closer to username
+  enumeration than to guessing, spraying, or credential stuffing, so it carries
+  the parent T1110 rather than a sub-technique that would misdescribe it.
 
-Current coverage: Credential Access (T1110.001), Reconnaissance (T1595.002,
-T1595.003), Persistence (T1136.001), and on the Windows side Execution and
-Defense Evasion (T1059.001, T1562.001). 100200 and 100202 are not yet tagged.
-Wazuh validates the IDs against its bundled ATT&CK database at startup — a
-typo'd technique ID is rejected on restart, so run `wazuh-logtest -t` and check
-`ossec.log` after deploying.
+Current coverage: Credential Access (T1110, T1110.001), Reconnaissance
+(T1595.002, T1595.003), Persistence (T1136.001), and on the Windows side
+Execution and Defense Evasion (T1059.001, T1562.001). Ali's rules are not yet
+tagged. Wazuh validates the IDs against its bundled ATT&CK database at startup —
+a typo'd technique ID is rejected on restart, so run `wazuh-analysisd -t` and
+check `ossec.log` after deploying.
 
 ---
 
@@ -175,16 +177,18 @@ typo'd technique ID is rejected on restart, so run `wazuh-logtest -t` and check
 |-- decoders/
 |-- agent-configs/
 |   |-- sysmonconfig-export.xml   # canonical Sysmon config -- install from this copy
-|   `-- ubuntu-agent.conf         # Linux agent <localfile> blocks (journald + Apache)
+|   |-- ubuntu-agent.conf         # Linux agent <localfile> blocks (journald + Apache)
+|   `-- windows-agent.conf        # Windows agent <localfile> blocks (Security + Sysmon)
 |-- samples/
 |   |-- *.log                 # raw log lines for offline rule testing
 |   `-- example_attacks.sh    # generates live attack traffic to trigger the rules
 `-- screenshots/              # <source>-<ruleid>-<description>.png
 ```
 
-Both agents must run the Sysmon config from `agent-configs/` rather than a
-separately downloaded copy — different configs emit different event fields, so
-a rule that works for one of us will silently not fire for the other.
+The Windows agent must install Sysmon from the copy in `agent-configs/` rather
+than a separately downloaded one — different Sysmon configs emit different event
+fields, so a rule that works against one config will silently not fire against
+another.
 
 ---
 
@@ -261,7 +265,7 @@ cd ~/wazuh-siem-lab && git pull
 sudo cp rules/linux_rules.xml /var/ossec/etc/rules/
 sudo chown wazuh:wazuh /var/ossec/etc/rules/linux_rules.xml
 
-sudo /var/ossec/bin/wazuh-logtest -t      # validate syntax BEFORE restarting
+sudo /var/ossec/bin/wazuh-analysisd -t    # validate syntax BEFORE restarting
 sudo systemctl restart wazuh-manager
 sudo tail -20 /var/ossec/logs/ossec.log   # confirm it came back cleanly
 ```
@@ -271,7 +275,26 @@ Two things that fail silently if skipped:
 - **The `chown`.** A rule file owned by root cannot be read by the `wazuh` user.
   The file loads nothing and reports no error.
 - **The syntax check.** Malformed XML stops the manager from starting at all,
-  which turns a bad rule into a dead service.
+  which turns a bad rule into a dead service. A rules file whose root element is
+  anything other than `<group>` fails this way — the error is
+  `rules_op: Invalid root element`, and the manager will not come back up until
+  the file is fixed or moved out of `etc/rules/`.
+
+### Two different tools, two different jobs
+
+`wazuh-analysisd -t` is a **syntax validator**. It parses `ossec.conf` and every
+included rules file and reports errors without restarting anything. Run it
+before every restart, for both rule files. Note that `wazuh-logtest -t` is not
+a valid invocation on 4.14 — it returns a usage error.
+
+`wazuh-logtest` is a **detection simulator**. It takes a raw log line and shows
+which decoder and which rule match it. It is the right tool for Linux rules,
+where a sample is a single syslog-shaped line you can paste directly. It is less
+practical for the Windows rules: eventchannel logs arrive as JSON, so a Windows
+sample is a whole JSON object rather than a line, and pasting the wrong part of
+an alert into logtest just gets it decoded as JSON and matched against rule 1002.
+For Windows detections it is usually faster to generate the event on the VM and
+watch `alerts.json`.
 
 ### Testing composite rules
 
@@ -379,6 +402,15 @@ service status. `sudo filebeat test output` returns a 401 in this state.
 The credential is now stored in the Filebeat keystore rather than plaintext in
 the config file.
 
+**Applying `internal_users.yml` overwrites the user list, it does not merge.**
+`securityadmin.sh` treats the file as authoritative, so any dashboard account
+created through the UI but absent from the file is deleted on the next apply.
+Recreate accounts after a password rotation, and remember that a dashboard user
+needs authorization in two separate places: OpenSearch security for data access,
+and the Wazuh plugin's own RBAC for application access. A user with only the
+first logs in but throws a `getPatternList` error and cannot load index
+patterns.
+
 **If the dashboard loads but no new alerts appear**, work backwards through the
 pipeline: does `alerts.json` have recent entries? Does `filebeat test output`
 pass? Has the index doc count grown? Is the host disk full — when it fills,
@@ -400,7 +432,6 @@ OpenSearch flips indices to read-only, which looks exactly like a broken agent.
 SIEM deployment and administration — log source onboarding across Windows,
 Linux, and web servers — detection engineering in Wazuh's rule language,
 including composite frequency-based rules mapped to MITRE ATT&CK techniques —
-alert triage and investigation —
-secure network design with a zero-trust mesh VPN and host firewalls — pipeline
-troubleshooting across manager, Filebeat, and indexer — collaborative Git
-workflow with and peer review.
+alert triage and investigation — secure network design with a zero-trust mesh
+VPN and host firewalls — pipeline troubleshooting across manager, Filebeat, and
+indexer — collaborative Git workflow with branch protection and peer review.
