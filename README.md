@@ -93,7 +93,7 @@ Live and firing:
 | Rule ID | Owner | Detection | Level | ATT&CK |
 | --- | --- | --- | --- | --- |
 | 100100 | Zunan | Repeated failed SSH logins from one source IP | 10 | T1110 |
-| 100101 | Zunan | Web 404 burst from one source IP | 8 | T1595.003 |
+| 100101 | Zunan | Web 4xx burst from one source IP | 8 | T1595.003 |
 | 100102 | Zunan | Repeated failed SSH logins against a valid account | 12 | T1110.001 |
 | 100103 | Zunan | Known scanning tool user-agent in web request | 7 | T1595.002 |
 | 100104 | Zunan | New user account created on a Linux host | 10 | T1136.001 |
@@ -383,15 +383,16 @@ two of us unblocked from each other.
 
 ### Failure modes worth knowing
 
-**The indexer admin password lives in four places.** Rotating it in
-`internal_users.yml` alone breaks things quietly:
+**The indexer admin password lives in three places, and a fourth file holds a
+separate credential you will check anyway.** Rotating it in `internal_users.yml`
+alone breaks things quietly:
 
-| Location | Consumer |
-| --- | --- |
-| `/etc/wazuh-indexer/opensearch-security/internal_users.yml` | the credential itself |
-| `/etc/wazuh-dashboard/opensearch_dashboards.yml` | dashboard -> indexer |
-| `/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml` | Wazuh API (may use a separate `wazuh-wui` account) |
-| `/etc/filebeat/filebeat.yml` | **alert shipping** |
+| Location | Consumer | Account |
+| --- | --- | --- |
+| `/etc/wazuh-indexer/opensearch-security/internal_users.yml` | the credential itself | `admin` |
+| `/etc/wazuh-dashboard/opensearch_dashboards.yml` | dashboard -> indexer | `admin` |
+| Filebeat keystore (`/var/lib/filebeat/filebeat.keystore`) | **alert shipping** | `admin` |
+| `/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml` | dashboard -> Wazuh API | `wazuh-wui` |
 
 Missing the Filebeat entry produced the least obvious failure in this build:
 rules fired correctly, alerts were written to `alerts.json` on disk, all three
