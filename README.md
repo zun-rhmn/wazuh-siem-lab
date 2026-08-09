@@ -154,10 +154,10 @@ Two things to keep in mind when tagging a new rule:
 
 Current coverage: Credential Access (T1110, T1110.001), Reconnaissance
 (T1595.002, T1595.003), Persistence (T1136.001), and on the Windows side
-Execution and Defense Evasion (T1059.001, T1562.001). Ali's rules are not yet
-tagged. Wazuh validates the IDs against its bundled ATT&CK database at startup —
-a typo'd technique ID is rejected on restart, so run `wazuh-analysisd -t` and
-check `ossec.log` after deploying.
+Execution and Defense Evasion (T1059.001, T1562.001). Wazuh validates the IDs
+against its bundled ATT&CK database at startup — a typo'd technique ID is
+rejected on restart, so run `wazuh-analysisd -t` and check `ossec.log` after
+deploying.
 
 ---
 
@@ -170,6 +170,7 @@ check `ossec.log` after deploying.
 |-- .gitignore
 |-- .gitattributes
 |-- docs/
+|   |-- setup.md              # full build guide, manager through agents
 |   `-- investigations/       # one writeup per triaged alert
 |-- rules/
 |   |-- linux_rules.xml       # Zunan  -- 100100-100199

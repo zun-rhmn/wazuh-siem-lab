@@ -33,8 +33,8 @@ found or broke anything."
 
 ## Severity assessment
 
-**Level 7 is appropriate** — the low end of the 7–9 "suspicious" band, and
-correctly the lowest-rated of all five live rules. Justification, matching
+**Level 7 is appropriate** — the low end of the 6–9 "suspicious" band, and
+correctly the lowest-rated of the five Linux rules. Justification, matching
 the rule's own comment:
 
 - The detection is trivially evaded — any attacker who sets `-A` to spoof a
