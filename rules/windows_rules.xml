@@ -1,7 +1,7 @@
 <!--
   windows_rules.xml
   Owner: ali devjiani (adevjiani)
-  Rule ID range: 100100-100199
+  Rule ID range: 100200-100299
   Sources: wazuh discover tab alerts, wazuh docs
 
   Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
