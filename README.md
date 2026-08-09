@@ -1,4 +1,4 @@
-# Wazuh SIEM Lab
+# Wazuh SIEM Detection Engineering Lab
 
 A two-person blue-team lab: a single-node Wazuh SIEM collecting from three log
 sources, with custom detection rules written, tested, and triaged end-to-end.
