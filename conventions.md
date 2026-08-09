@@ -12,7 +12,7 @@ cheap to agree on now and painful to retrofit later.
 | **Rule ID range** | `100100`–`100199` | `100200`–`100299` |
 | **Rule file** | `rules/linux_rules.xml` | `rules/windows_rules.xml` |
 | **Log sources** | Linux auth, syslog, Apache | Windows Security, Sysmon |
-| **Agent names** | `ubuntu-zrahman`, `web-zrahman` | `win-adevjiani` |
+| **Agent names** | `ubuntu-zrahman` | `win-adevjiani` |
 | **Test accounts** | `testuser-zrahman` | `testuser-adevjiani` |
 | **Decoder prefix** | `zrahman_` | `adevjiani_` |
 
@@ -59,7 +59,7 @@ across sources and it will show in the demo.
 | --- | --- | --- |
 | 0–2 | Ignored / noise | — |
 | 3–5 | Informational | Successful login, service start |
-| 7–9 | Suspicious, worth a look | Single failed auth, odd user-agent, unusual PowerShell |
+| 6–9 | Suspicious, worth a look | Single failed auth, odd user-agent, unusual PowerShell |
 | 10–12 | High — would page someone | Brute-force threshold hit, admin group change |
 | 13–15 | Critical | Confirmed compromise indicators |
 
@@ -80,6 +80,19 @@ linux-100100-ssh-bruteforce.png
 windows-100202-admin-group-add.png
 web-100101-404-burst.png
 ```
+
+**Log samples:** `samples/<source>-<ruleid>-<short-desc>.log`
+
+```
+linux-100100-invalid-user.log
+web-100101-404-burst.log
+windows-100200-failed-login.log
+```
+
+`<source>` is the same set of values as for screenshots — `linux`, `web`,
+`windows` — so a rule's sample and its screenshot share a prefix. Name it for
+the platform, not the protocol: `ssh-` and `linux-` would be two names for the
+same journald source.
 
 **Investigation writeups:** `docs/investigations/<ruleid>-<short-name>.md`
 

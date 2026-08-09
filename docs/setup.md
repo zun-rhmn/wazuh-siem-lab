@@ -4,7 +4,7 @@ Full build guide for the lab, manager through agents, in the order it was
 actually done. Where a step has a non-obvious failure mode, it is called out;
 most of these cost real time to diagnose the first time.
 
-Read [`conventions.md`](conventions.md) first for naming, ID ranges, and the
+Read [`conventions.md`](../conventions.md) first for naming, ID ranges, and the
 alert-level scale.
 
 ---
@@ -329,15 +329,15 @@ belong there.
 
 ## 8. Credential rotation (read before rotating)
 
-The indexer admin password lives in three files, plus a fourth file holds a
-separate API credential. Rotating one and missing the others produces silent
-partial failures.
+The indexer admin password lives in two config files and Filebeat's keystore,
+plus a fourth location holding a separate API credential. Rotating one and
+missing the others produces silent partial failures.
 
 | File | Consumer | Account |
 | --- | --- | --- |
 | `/etc/wazuh-indexer/opensearch-security/internal_users.yml` | the store itself | `admin` |
 | `/etc/wazuh-dashboard/opensearch_dashboards.yml` | dashboard -> indexer | `admin` |
-| `/etc/filebeat/filebeat.yml` | alert shipping | `admin` |
+| Filebeat keystore (`/var/lib/filebeat/filebeat.keystore`) | alert shipping | `admin` |
 | `/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml` | dashboard -> Wazuh API | `wazuh-wui` (separate) |
 
 Procedure:
@@ -359,11 +359,19 @@ sudo OPENSEARCH_JAVA_HOME=/usr/share/wazuh-indexer/jdk ./securityadmin.sh \
   -key /etc/wazuh-indexer/certs/admin-key.pem \
   -h 127.0.0.1
 
-# 5. verify, then update opensearch_dashboards.yml and filebeat.yml
+# 5. verify, then update opensearch_dashboards.yml and the Filebeat keystore
 curl -k -u admin:'<new-password>' https://127.0.0.1:9200/_cluster/health?pretty
+sudo filebeat keystore add password --force    # prompts; do not put it in filebeat.yml
 sudo filebeat test output      # must say "talk to server... OK"
 sudo systemctl restart wazuh-dashboard filebeat
 ```
+
+**Filebeat's copy lives in its keystore, not in `filebeat.yml`.** The config
+references it as `${password}`; the value itself is in the keystore, so a
+rotation that only edits YAML files leaves Filebeat authenticating with the old
+password. That is the failure mode that produced alerts in `alerts.json` but an
+empty dashboard — every service healthy, nothing reaching the index. List what
+the keystore holds with `sudo filebeat keystore list`.
 
 **`securityadmin.sh` overwrites the user list, it does not merge.** Any
 dashboard account created through the UI but absent from `internal_users.yml` is

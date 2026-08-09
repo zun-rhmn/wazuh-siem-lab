@@ -20,7 +20,7 @@ matches only `5760` to avoid triple-counting the same attempt.
 
 ## Raw log
 
-`samples/ssh-100102-failed-password.log` — 15 attempts, `00:29:27`–`00:30:29`
+`samples/linux-100102-failed-password.log` — 15 attempts, `00:29:27`–`00:30:29`
 (62 seconds). Each attempt produces the exact 3-event correlation the rule
 comment describes:
 

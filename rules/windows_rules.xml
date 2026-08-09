@@ -2,7 +2,8 @@
   windows_rules.xml
   Owner: ali devjiani (adevjiani)
   Rule ID range: 100200-100299
-  Sources: wazuh discover tab alerts, wazuh docs
+  Sources: Windows Security channel, Sysmon operational log
+  Written from: alerts observed in the dashboard Discover tab, plus the Wazuh docs
 
   Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
   chown wazuh:wazuh, wazuh-analysisd -t, restart wazuh-manager.
@@ -30,10 +31,10 @@
     <if_sid>60154</if_sid>
     <field name="win.system.eventID">^4732$</field>
     <description>Privilege Escalation: User $(win.eventdata.memberName) added to the Windows Administrators group by $(win.eventdata.subjectUserName).</description>
-    <group>win_priviledge_escalation</group>
+    <group>win_privilege_escalation</group>
   </rule>
 
-<!-- future ip matching consideration (can't test rn) -->
+<!-- future ip matching consideration -->
 <!--risk of high false-->
   <rule id="100203" level="13" timeframe="300">
     <if_sid>60106</if_sid>
