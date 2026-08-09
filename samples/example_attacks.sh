@@ -35,7 +35,7 @@ CONF="$(dirname "$0")/attack-target.conf"
 
 TARGET="${TARGET:-ubuntu-agent}"
 VALID_USER="${VALID_USER:-testuser}"
-PAUSE=90          # seconds between tests in a full run, so windows do not overlap
+PAUSE=120         # seconds between tests in a full run, so windows do not overlap
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -48,7 +48,7 @@ banner() {
 }
 
 usage() {
-  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -148,8 +148,8 @@ test_100102() {
   done
   echo "Expect: rule 100102, level 12"
   echo
-  echo "  If it does not fire: this rule is built on stock rule 5716. Some sshd"
-  echo "  versions log 5760 or 5503 for this pattern instead. Check what actually"
+  echo "  If it does not fire: this rule is built on stock rule 5760. Some sshd"
+  echo "  versions log 5716 or 5503 for this pattern instead. Check what actually"
   echo "  fired and adjust if_matched_sid in linux_rules.xml:"
   echo "    sudo tail -30 /var/ossec/logs/alerts/alerts.json | jq -c '{rule:.rule.id, desc:.rule.description}'"
 }

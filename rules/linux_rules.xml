@@ -5,7 +5,7 @@
   Sources: Linux auth logs, Apache access/error logs
 
   Deploy: copy to /var/ossec/etc/rules/ on wazuh-siem-manager,
-  chown wazuh:wazuh, wazuh-logtest -t, restart wazuh-manager.
+  chown wazuh:wazuh, wazuh-analysisd -t, restart wazuh-manager.
 -->
 
 <group name="local,syslog,sshd,">
@@ -20,7 +20,7 @@
     <same_srcip />
     <description>Repeated failed SSH logins from $(srcip) - possible brute force</description>
     <mitre>
-      <id>T1110.001</id>
+      <id>T1110</id>
     </mitre>
     <group>authentication_failures,brute_force,pci_dss_10.2.4,pci_dss_10.2.5,</group>
   </rule>
@@ -95,10 +95,17 @@
     100103 - Known scanning tool user-agent. Single-line match, no frequency.
     Trivially evaded by setting -A, which is why it is only level 7: it catches
     lazy automation, not a careful attacker.
+
+    The regex is anchored to the LAST quoted field on the line, which in
+    Apache's combined format is the User-Agent. An unanchored match would also
+    fire on the request path, so a request for /nmap-results.txt from an
+    ordinary browser would alert - a false positive an attacker can trigger
+    deliberately. Assumes combined format (UA last); if the LogFormat ever
+    grows a trailing field, this anchor has to move.
   -->
   <rule id="100103" level="7">
     <if_group>web|accesslog</if_group>
-    <regex>sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wpscan|hydra|zgrab|Nuclei</regex>
+    <regex type="pcre2">"[^"]*(?i:sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wpscan|hydra|zgrab|nuclei)[^"]*"\s*$</regex>
     <description>Known scanning tool user-agent in web request from $(srcip)</description>
     <mitre>
       <id>T1595.002</id>

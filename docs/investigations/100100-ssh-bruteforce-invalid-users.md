@@ -23,7 +23,7 @@ Connection closed by invalid user <name> <ip> port <port> [preauth]
 
 ## Raw log
 
-`samples/ssh-100100-invalid-user.log` — 20 attempts, usernames `baduser1`
+`samples/linux-100100-invalid-user.log` — 20 attempts, usernames `baduser1`
 through `baduser20`, timestamps `00:40:47`–`00:41:08` (21 seconds, sequential
 1-second spacing). Excerpt:
 
