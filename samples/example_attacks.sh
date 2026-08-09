@@ -57,7 +57,7 @@ list_tests() {
 Available tests:
 
   100100   SSH brute force, non-existent users   -> level 10
-  100101   Web 404 burst / path enumeration      -> level 8
+  100101   Web 4xx burst / path enumeration      -> level 8
   100102   SSH brute force, valid account         -> level 12
   100103   Known scanning tool user-agent         -> level 7
 
@@ -99,7 +99,7 @@ test_100103() {
 }
 
 test_100101() {
-  banner "100101 — web 404 burst / path enumeration"
+  banner "100101 — web 4xx burst / path enumeration"
   # Distinct paths, spread ~1s apart. 20 requests in under a second can be
   # collapsed before the frequency counter sees them as separate events.
   local paths=(admin wp-login.php .env .git/config phpmyadmin backup.sql

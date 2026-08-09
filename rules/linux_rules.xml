@@ -84,7 +84,7 @@
   <rule id="100101" level="8" frequency="12" timeframe="60">
     <if_matched_sid>31101</if_matched_sid>
     <same_srcip />
-    <description>Web 404 burst from $(srcip) - possible directory or file enumeration</description>
+    <description>Web 4xx burst from $(srcip) - possible directory or file enumeration</description>
     <mitre>
       <id>T1595.003</id>
     </mitre>
