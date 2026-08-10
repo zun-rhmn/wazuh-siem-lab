@@ -98,14 +98,9 @@ Live and firing:
 | 100103 | Zunan | Known scanning tool user-agent in web request | 7 | T1595.002 |
 | 100104 | Zunan | New user account created on a Linux host | 10 | T1136.001 |
 | 100200 | Ali | Multiple failed Windows logons | 10 | — |
+| 100201 | Ali | Suspicious PowerShell usage | 9 | T1059.001, T1562.001 |
 | 100202 | Ali | New user added to Administrators | 12 | — |
 | 100203 | Ali | Possible account compromise through brute force | 13 | — |
-
-In progress:
-
-| Rule ID | Owner | Detection | Level | ATT&CK |
-| --- | --- | --- | --- | --- |
-| 100201 | Ali | Suspicious PowerShell usage | 9 | T1059.001, T1562.001 |
 
 100100, 100101, and 100102 are composite rules: they do not match a log line
 directly. Each counts how many times a stock Wazuh rule has fired from the same
