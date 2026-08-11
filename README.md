@@ -31,14 +31,14 @@ exposure.
 
 | Component | Value |
 | --- | --- |
-| Wazuh version | 4.14 (pinned — do not mix minor versions) |
+| Wazuh version | 4.14 (pinned; do not mix minor versions) |
 | Manager address | `wazuh-siem-manager` |
 | Dashboard | `https://wazuh-siem-manager` |
 | Manager OS | Ubuntu Server 24.04 LTS, 4 vCPU / 8 GB / 60 GB |
 | Timezone | UTC on every host, NTP sync verified |
 
 > The manager runs on Zunan's laptop, so the lab is reachable only while that
-> machine is powered on. Rule development does **not** require it — see
+> machine is powered on. Rule development does **not** require it. See
 > [Offline rule development](#offline-rule-development).
 
 ---
@@ -74,7 +74,7 @@ This matters in three places:
   depend on this source, so they simply never fire.
 - **Capturing a sample line means `journalctl -u ssh`, not `tail`.** OpenSSH 9.8
   handles each connection in a separate `sshd-session` process, so
-  `journalctl _COMM=sshd` misses the auth failures entirely — filter by unit.
+  `journalctl _COMM=sshd` misses the auth failures entirely. Filter by unit.
 - **Journal-sourced events reach the decoders in syslog shape**, which is why
   the stock rules still match unchanged and the custom rules can key off them:
   100100 on 5710, 100102 on 5760, 100104 on 5902.
@@ -82,7 +82,7 @@ This matters in three places:
 The agent's actual `<localfile>` blocks are committed at
 [`agent-configs/ubuntu-agent.conf`](agent-configs/ubuntu-agent.conf). Sample
 lines in `samples/` were captured this way and are labelled with their
-source — see [`samples/README.md`](samples/README.md).
+source. See [`samples/README.md`](samples/README.md).
 
 ---
 
@@ -109,7 +109,7 @@ source IP within a timeframe, using `if_matched_sid` with `frequency`,
 minutes from one address is a detection.
 
 Thresholds were tuned empirically against observed event rates in this lab
-rather than taken from a reference — the textbook values did not fire reliably
+rather than taken from a reference. The textbook values did not fire reliably
 at the volumes a three-host lab actually produces.
 
 Rules live in `rules/`, split by platform so the two of us never edit the same
@@ -138,19 +138,20 @@ Two things to keep in mind when tagging a new rule:
 
 - **Tag what the rule observes, not what the attacker is presumably up to.**
   100102 watches failed logins against a valid account, so it maps to
-  T1110.001 (Password Guessing) and nothing else — tempting as it is to add
+  T1110.001 (Password Guessing) and nothing else. Tempting as it is to add
   Valid Accounts, the rule never sees a successful login. Aspirational tags
   make the coverage view read better than the detections actually are.
 - **Sub-techniques where one fits, the parent where none does.** 100102 is
   password guessing against a known account, so T1110.001 is exact. 100100
-  fires on attempts against accounts that do not exist — closer to username
-  enumeration than to guessing, spraying, or credential stuffing, so it carries
-  the parent T1110 rather than a sub-technique that would misdescribe it.
+  fires on attempts against accounts that do not exist, which is closer to
+  username enumeration than to guessing, spraying, or credential stuffing, so
+  it carries the parent T1110 rather than a sub-technique that would
+  misdescribe it.
 
 Current coverage: Credential Access (T1110, T1110.001), Reconnaissance
 (T1595.002, T1595.003), Persistence (T1136.001), and on the Windows side
 Execution and Defense Evasion (T1059.001, T1562.001). Wazuh validates the IDs
-against its bundled ATT&CK database at startup — a typo'd technique ID is
+against its bundled ATT&CK database at startup. A typo'd technique ID is
 rejected on restart, so run `wazuh-analysisd -t` and check `ossec.log` after
 deploying.
 
@@ -182,7 +183,7 @@ deploying.
 ```
 
 The Windows agent must install Sysmon from the copy in `agent-configs/` rather
-than a separately downloaded one — different Sysmon configs emit different event
+than a separately downloaded one. Different Sysmon configs emit different event
 fields, so a rule that works against one config will silently not fire against
 another.
 
@@ -236,7 +237,7 @@ NET START WazuhSvc
 
 Then confirm the agent reads **Active** in the dashboard.
 
-### Register the rule files — do this once
+### Register the rule files (do this once)
 
 Wazuh only loads `local_rules.xml` by default. Custom rule files must be
 declared inside the `<ruleset>` block of `/var/ossec/etc/ossec.conf` on the
@@ -248,7 +249,7 @@ declared inside the `<ruleset>` block of `/var/ossec/etc/ossec.conf` on the
 ```
 
 Without these lines the files sit in the rules directory and are never read.
-Nothing errors — the rules simply never fire.
+Nothing errors; the rules simply never fire.
 
 ### Deploy a rule change
 
@@ -272,7 +273,7 @@ Two things that fail silently if skipped:
   The file loads nothing and reports no error.
 - **The syntax check.** Malformed XML stops the manager from starting at all,
   which turns a bad rule into a dead service. A rules file whose root element is
-  anything other than `<group>` fails this way — the error is
+  anything other than `<group>` fails this way. The error is
   `rules_op: Invalid root element`, and the manager will not come back up until
   the file is fixed or moved out of `etc/rules/`.
 
@@ -281,7 +282,7 @@ Two things that fail silently if skipped:
 `wazuh-analysisd -t` is a **syntax validator**. It parses `ossec.conf` and every
 included rules file and reports errors without restarting anything. Run it
 before every restart, for both rule files. Note that `wazuh-logtest -t` is not
-a valid invocation on 4.14 — it returns a usage error.
+a valid invocation on 4.14; it returns a usage error.
 
 `wazuh-logtest` is a **detection simulator**. It takes a raw log line and shows
 which decoder and which rule match it. It is the right tool for Linux rules,
@@ -302,7 +303,7 @@ sudo /var/ossec/bin/wazuh-logtest
 ```
 
 Paste a raw log line and you will see the stock rule match. Paste the *same
-line* repeatedly without exiting — once the frequency threshold is crossed, the
+line* repeatedly without exiting. Once the frequency threshold is crossed, the
 custom rule fires. Seeing only the stock rule on a single paste is expected, not
 a failure.
 
@@ -312,8 +313,8 @@ to the index. Confirming a rule there does not put an alert on the dashboard.
 ### Generating live test traffic
 
 `samples/example_attacks.sh` drives real attack traffic at the Linux agent to
-exercise the detections end-to-end — the counterpart to logtest, since this
-path does reach `alerts.json` and the dashboard.
+exercise the detections end-to-end. It is the counterpart to logtest, since
+this path does reach `alerts.json` and the dashboard.
 
 Run it from the **attacker host**, not the target: `same_srcip` grouping is
 meaningless when every event carries `::1`.
@@ -348,7 +349,7 @@ write or test rules. `samples/` holds raw log lines captured from each source.
 Paste one into `wazuh-logtest` on any Wazuh install to confirm a rule matches,
 before it ever touches the shared manager.
 
-Add to `samples/` whenever you capture something useful — it is what keeps the
+Add to `samples/` whenever you capture something useful. It is what keeps the
 two of us unblocked from each other.
 
 ---
@@ -391,7 +392,7 @@ alone breaks things quietly:
 
 Missing the Filebeat entry produced the least obvious failure in this build:
 rules fired correctly, alerts were written to `alerts.json` on disk, all three
-services reported healthy, and the dashboard loaded normally — but showed no
+services reported healthy, and the dashboard loaded normally, but it showed no
 results for any time range, because nothing was reaching the index. Diagnosing
 it meant checking each stage of the pipeline separately rather than trusting the
 service status. `sudo filebeat test output` returns a 401 in this state.
@@ -410,14 +411,14 @@ patterns.
 
 **If the dashboard loads but no new alerts appear**, work backwards through the
 pipeline: does `alerts.json` have recent entries? Does `filebeat test output`
-pass? Has the index doc count grown? Is the host disk full — when it fills,
+pass? Has the index doc count grown? Is the host disk full? When it fills,
 OpenSearch flips indices to read-only, which looks exactly like a broken agent.
 
 ## Next steps
 
 - **Network-based detection.** This lab is entirely host-based (HIDS): agents
   read logs a host has already written. Adding Suricata as a NIDS on the Linux
-  agent would give packet-level visibility — port scans, exploit payloads,
+  agent would give packet-level visibility: port scans, exploit payloads,
   and C2 patterns that never appear in a host log. Wazuh ingests Suricata's
   eve.json natively.
 - **Migrate the manager to dedicated hardware** so the lab runs continuously.
@@ -426,9 +427,11 @@ OpenSearch flips indices to read-only, which looks exactly like a broken agent.
 
 ## Skills demonstrated
 
-SIEM deployment and administration — log source onboarding across Windows,
-Linux, and web servers — detection engineering in Wazuh's rule language,
-including composite frequency-based rules mapped to MITRE ATT&CK techniques —
-alert triage and investigation — secure network design with a zero-trust mesh
-VPN and host firewalls — pipeline troubleshooting across manager, Filebeat, and
-indexer — collaborative Git workflow with branch protection and peer review.
+- SIEM deployment and administration
+- Log source onboarding across Windows, Linux, and web servers
+- Detection engineering in Wazuh's rule language, including composite
+  frequency-based rules mapped to MITRE ATT&CK techniques
+- Alert triage and investigation
+- Secure network design with a zero-trust mesh VPN and host firewalls
+- Pipeline troubleshooting across manager, Filebeat, and indexer
+- Collaborative Git workflow with branch protection and peer review
