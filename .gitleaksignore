@@ -1,0 +1,4 @@
+# Documentation placeholder, not a credential. The curl-auth-user rule matches
+# the -u user:pass shape; the value here is the literal string <new-password>.
+26bba9b4baa0c23073c93f65ddd94fa3e5f463cf:docs/investigations/setup.md:curl-auth-user:363
+1625641a537953a70b1118735870090eef400748:docs/investigations/setup.md:curl-auth-user:363
